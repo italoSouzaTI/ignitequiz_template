@@ -13,6 +13,14 @@ import { Question } from '../../components/Question';
 import { QuizHeader } from '../../components/QuizHeader';
 import { ConfirmButton } from '../../components/ConfirmButton';
 import { OutlineButton } from '../../components/OutlineButton';
+import Animated, {
+  useSharedValue,
+  withSequence,
+  withTiming,
+  useAnimatedStyle,
+  interpolate,
+  Easing
+} from 'react-native-reanimated';
 
 interface Params {
   id: string;
@@ -20,26 +28,30 @@ interface Params {
 
 type QuizProps = typeof QUIZ[0];
 
-export function Quiz() {
+export function Quiz () {
   const [points, setPoints] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [quiz, setQuiz] = useState<QuizProps>({} as QuizProps);
   const [alternativeSelected, setAlternativeSelected] = useState<null | number>(null);
 
+
+  //Animated
+  const shake = useSharedValue(0);
+
   const { navigate } = useNavigation();
 
   const route = useRoute();
   const { id } = route.params as Params;
 
-  function handleSkipConfirm() {
+  function handleSkipConfirm () {
     Alert.alert('Pular', 'Deseja realmente pular a questão?', [
       { text: 'Sim', onPress: () => handleNextQuestion() },
       { text: 'Não', onPress: () => { } }
     ]);
   }
 
-  async function handleFinished() {
+  async function handleFinished () {
     await historyAdd({
       id: new Date().getTime().toString(),
       title: quiz.title,
@@ -54,7 +66,7 @@ export function Quiz() {
     });
   }
 
-  function handleNextQuestion() {
+  function handleNextQuestion () {
     if (currentQuestion < quiz.questions.length - 1) {
       setCurrentQuestion(prevState => prevState + 1)
     } else {
@@ -62,13 +74,15 @@ export function Quiz() {
     }
   }
 
-  async function handleConfirm() {
+  async function handleConfirm () {
     if (alternativeSelected === null) {
       return handleSkipConfirm();
     }
 
     if (quiz.questions[currentQuestion].correct === alternativeSelected) {
       setPoints(prevState => prevState + 1);
+    } else {
+      shakeAnimation();
     }
 
     setAlternativeSelected(null);
@@ -76,7 +90,7 @@ export function Quiz() {
     handleNextQuestion();
   }
 
-  function handleStop() {
+  function handleStop () {
     Alert.alert('Parar', 'Deseja parar agora?', [
       {
         text: 'Não',
@@ -91,6 +105,25 @@ export function Quiz() {
 
     return true;
   }
+
+  function shakeAnimation () {
+    shake.value = withSequence(
+      withTiming(3, { duration: 400, easing: Easing.bounce }),
+      withTiming(0)
+    );
+  }
+
+  const shekeStyleAnimated = useAnimatedStyle(() => {
+    return {
+      transform: [{
+        translateX: interpolate(
+          shake.value,
+          [0, 0.5, 1, 1.5, 2, 2.5, 3],
+          [0, -15, 0, 15, 0, -15, 0]
+        )
+      }]
+    }
+  })
 
   useEffect(() => {
     const quizSelected = QUIZ.filter(item => item.id === id)[0];
@@ -113,13 +146,16 @@ export function Quiz() {
           currentQuestion={currentQuestion + 1}
           totalOfQuestions={quiz.questions.length}
         />
-
-        <Question
-          key={quiz.questions[currentQuestion].title}
-          question={quiz.questions[currentQuestion]}
-          alternativeSelected={alternativeSelected}
-          setAlternativeSelected={setAlternativeSelected}
-        />
+        <Animated.View
+          style={shekeStyleAnimated}
+        >
+          <Question
+            key={quiz.questions[currentQuestion].title}
+            question={quiz.questions[currentQuestion]}
+            alternativeSelected={alternativeSelected}
+            setAlternativeSelected={setAlternativeSelected}
+          />
+        </Animated.View>
 
         <View style={styles.footer}>
           <OutlineButton title="Parar" onPress={handleStop} />
