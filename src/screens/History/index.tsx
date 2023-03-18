@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { HouseLine } from 'phosphor-react-native';
+import Animated, { Layout, SlideInRight, SlideOutRight } from 'react-native-reanimated';
 
 import { Header } from '../../components/Header';
 import { HistoryCard, HistoryProps } from '../../components/HistoryCard';
@@ -10,25 +11,25 @@ import { styles } from './styles';
 import { historyGetAll, historyRemove } from '../../storage/quizHistoryStorage';
 import { Loading } from '../../components/Loading';
 
-export function History() {
+export function History () {
   const [isLoading, setIsLoading] = useState(true);
   const [history, setHistory] = useState<HistoryProps[]>([]);
 
   const { goBack } = useNavigation();
 
-  async function fetchHistory() {
+  async function fetchHistory () {
     const response = await historyGetAll();
     setHistory(response);
     setIsLoading(false);
   }
 
-  async function remove(id: string) {
+  async function remove (id: string) {
     await historyRemove(id);
 
     fetchHistory();
   }
 
-  function handleRemove(id: string) {
+  function handleRemove (id: string) {
     Alert.alert(
       'Remover',
       'Deseja remover esse registro?',
@@ -65,12 +66,20 @@ export function History() {
       >
         {
           history.map((item) => (
-            <TouchableOpacity
+            <Animated.View
               key={item.id}
-              onPress={() => handleRemove(item.id)}
+              entering={SlideInRight}
+              exiting={SlideOutRight}
+              layout={Layout.springify()}
             >
-              <HistoryCard data={item} />
-            </TouchableOpacity>
+
+              <TouchableOpacity
+
+                onPress={() => handleRemove(item.id)}
+              >
+                <HistoryCard data={item} />
+              </TouchableOpacity>
+            </Animated.View>
           ))
         }
       </ScrollView>
